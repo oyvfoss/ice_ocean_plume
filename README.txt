@@ -2,6 +2,11 @@
 
 ---
 
+STATUS 26.06 2020: 
+Seems to work nicely, but yet to do extensive testing/validation.
+
+---
+
 Integrating the buoyant plume equations in the along-ice-face coordinate.
 
 Returns stady-state plume properties (width, upwelling velocity, 

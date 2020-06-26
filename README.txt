@@ -15,12 +15,8 @@ number of other variables.
 
 ---
 
-Copyright (c) 2020 Norwegian Polar institute under the MIT-License.
-
-Written by Øyvind Lundesgaard (NPI).
-
 Inspired by (but not equivalent to!) previous Matlab application by Adrian
-Jenkins and later modifications  by Dustin Carroll.
+Jenkins and later modifications by Dustin Carroll.
 
 ---
 
@@ -48,7 +44,7 @@ Simple example:
 Inputs:
 =======
 
-    gl_dep:   Grounding line depth [m]
+    gl_dep:   Plume start depth (e.g. grounding line, ice shelf bottom) [m]
     volfl0    Initial volume flux 
                  Line plume: (Q / along-glacier width) [m2/s]
                  Cone plume: (Q) [m3/s]

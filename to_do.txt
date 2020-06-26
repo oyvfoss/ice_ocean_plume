@@ -1,0 +1,17 @@
+TO DO-LIST, ICE_OCEAN_PLUME
+###########################
+
+(Updated 26.06 2020)
+
+SHORT TERM
+
+- Do more extensive testing/validation.
+
+LONG TERM / OPTIONAL
+
+- Document in Sphinx.
+- Implement near-field behaviour for melt-only (zero discharge) case.
+- Implement functionality for iterative melt plume generation 
+  along a glacier face.
+- Implement (optional) alternative entrainment formulation?
+  

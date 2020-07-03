@@ -6,9 +6,16 @@ import matplotlib.pyplot as plt
 ######## Set parameters #######################################################
 
 gldep = 500 # Plume start depth (grounding line, e.g.)
-plume_type = 'line' # Line or cone plume 
-volfl0 = 1e-2 # For a line plume, this is volume per glacier front width (m2/s)
+plume_type = 'cone' # Line or cone plume 
+volfl0 = 1e-10 # For a line plume, this is volume per glacier front width (m2/s)
 
+T0 = 0
+S0 = 0
+T0freeze = False
+T0melt = True
+frac_melt = 1
+
+method = 'RK45'
 
 ######## Create fake profiles of ambient temperature and salinity #############
 
@@ -17,16 +24,17 @@ Ta = depa*0 + 2.0
 Sa = depa*0 + 35.0
 dz_upper = 1
 Sa[:100] = 35-dz_upper+np.arange(100)/100*dz_upper
-Sa[100:] = 35+np.arange(401)/401*0
+Sa[100:] = 35+np.arange(401)/401/2
 
 
 ######## Run model ############################################################
 
-P = ice_ocean_plume.plume(gldep, volfl0, Ta, Sa, depa, theta= 90, plume_type = plume_type)
+P = ice_ocean_plume.plume(gldep, volfl0, Ta, Sa, depa, theta= 90, 
+                          plume_type = plume_type,
+                          T0freeze = T0freeze, T0melt = T0melt, 
+                          frac_melt = frac_melt)
 P.set_params()
-P.solve(manual_step = False, Sinit = 0, melt_on = True, 
-        max_step = 0.5, )
-
+P.solve(manual_step = False, melt_on = True, method = method, max_step = 0.5, )
 
 ######## Print some results ###################################################
 
@@ -43,6 +51,9 @@ if plume_type == 'line':
     volfl_melt_unit = 'm² s⁻¹'
 else:
     volfl_melt_unit = 'm³ s⁻¹'
+
+print('\nInitial T, S: %.2f C, %.2f psu'%(P.T0, P.S0))
+
 
 print('\nInitial volume flux: %.3f %s'%(P.volfl0, volfl_melt_unit))
 print('Upward volume flux at neutral depth: %.3f %s'%(P.volfl_neut, 
@@ -101,8 +112,8 @@ for varnm, desc, unit, factor, axn, in zip(varnms, descs, units, factors, axs):
 for mm in np.arange(rows):
     ax[mm, 0].set_ylabel('Depth [m]')
 
-axs[2].plot(P.Ta_o, P.depa_o, ':k', label = 'Ta')
-axs[4].plot(P.Sa_o, P.depa_o, ':k', label = 'Sa')
+axs[2].plot(P.Ta, P.depa, ':k', label = 'Ta')
+axs[4].plot(P.Sa, P.depa, ':k', label = 'Sa')
 axs[2].legend(fontsize = 10, handlelength = 1)
 axs[4].legend(fontsize = 10, handlelength = 1)
 

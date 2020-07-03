@@ -55,7 +55,7 @@ Inputs:
     theta:    Angle between glacier face and horizontal [deg] 
               (90 for vertical face)
     
-    plume_type: 'line' (axisymmetric line plume) or
+    plume_type: 'line' (line plume) or
                 'cone' (half-cone)
 
 
@@ -118,7 +118,7 @@ ice-ocean interaction (Jenkins, 1991).
 
 dY/dx = f(Y, x) 
 
-For axisymmetric line plume (plume_type = 'line')
+For line plume (plume_type = 'line')
 
     (1) d(DU)/dx = E + M
     (2) d(DU²)/dx = D*dRho*g*sin(θ) - k*U²

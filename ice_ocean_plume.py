@@ -17,14 +17,14 @@ Jenkins and later modifications  by Dustin Carroll.
 Example:
 ========
 
-    P = plume.plume(gl_dep, volfl0, T_a, S_a, dep_a, theta = theta)
+    P = plume.plume(dep0, volfl0, T_a, S_a, dep_a, theta = theta)
     P.set_params()
     P.solve(plume_type = 'line')
 
 Inputs:
 =======
 
-    gl_dep:   Grounding line depth [m]
+    dep0:   Grounding line depth [m]
     volfl0    Initial volume flux 
                  Line plume: (Q / along-glacier width) [m2/s]
                  Cone plume: (Q) [m3/s]
@@ -35,7 +35,7 @@ Inputs:
     theta:    Angle between glacier face and horizontal [deg] 
               (90 for vertical face)
     
-    plume_type: 'line' (axisymmetric line plume) or
+    plume_type: 'line' (line plume) or
                 'cone' (half-cone)
 
 
@@ -95,19 +95,19 @@ ice-ocean interaction (Jenkins, 1991).
 
 dY/dx = f(Y, x) 
 
-For axisymmetric line plume (plume_type = 'line')
+For line plume (plume_type = 'line')
 
     (1) d(DU)/dx = E + M
     (2) d(DU²)/dx = D*dRho*g*sin(θ) - k*U²
     (3) d(DUT)/dx = E*Ta + M*Tb - GT*U*(T-Tb)
     (3) d(DUS)/dx = E*Sa + M*Sb - GS*U*(S-Sb)
 
-For half-cone plume (plume_type = 'cone')
+For axisymmetric half-cone plume (plume_type = 'cone')
 
-    (1) d(DU)/dx = (πD)*E + (2D)*M
-    (2) d(DU²)/dx = (πD²/2)*dRho*g*sin(θ) - (2D)*k*U²
-    (3) d(DUT)/dx = (πD)*E*Ta + (2D)*M*Tb - (2D)*GT*U*(T-Tb)
-    (3) d(DUS)/dx = (πD)*E*Sa + (2D)*M*Sb - (2D)*GS*U*(S-Sb)
+    (1) d(D²U)/dx = (2D)*E + (4D/π)*M
+    (2) d(D²U²)/dx = D²*dRho*g*sin(θ) - (4D/π)*k*U²
+    (3) d(D²UT)/dx = (2D)*E*Ta + (4D/π)*M*Tb - (4D/π)*GT*U*(T-Tb)
+    (3) d(D²US)/dx = (2D)*E*Sa + (4D/π)*M*Sb - (4D/π)*GS*U*(S-Sb)
 
 
 Initial conditions:
@@ -143,7 +143,7 @@ Parametrizations:
 Entrainment parameterization
 ----------------------------
 
-  E = e0*U 
+  E = e0*U*sin(θ)
 
 Turbulent exchange parameterization
 ----------------------------------
@@ -206,49 +206,59 @@ class plume():
     Initializing:
     --------------
 
-    gl_dep:       Grounding line depth [m]
-    volfl0:         Discharge flux (Q/D) [m2/s]
+    dep0:         Grounding line depth [m]
+    volfl0:       Discharge flux (Q/D) [m2/s]
     T_a:          Ambient water profile: in-situ temperature [C] 
     S_a:          Ambient water profile: practical salinity [psu]
     dep_a:        Ambient water profile: depth [m]
     theta:        Angle between glacier face and horizontal [deg] 
     plume_type:   'line' or 'cone'
+    
+    T0, S0:       Initial plume temperature [C] and salinity [psu]. 
+    T0freeze:     'True' sets T0 to T_f(S0). Overrides T0.
+    T0melt:        'True' sets T0, S0 to mixture between ambient water
+                  and ocean-driven melt. Overrides T0, S0.
+    frac_melt:    if *T0melt* is activated: sets the amount of meltwater 
+                  in the initial plume, from *frac_melt=0* (no 
+                  meltwater) along the Gade line to *frac_melt=1* 
+                  ("meltwater saturated ambient water").
+
 
     Example (minimal, with default options): 
     ----------------------------------------
-        P = plume.plume(gl_dep, volfl0, T_a, S_a, dep_a)
+        P = plume.plume(dep0, volfl0, T_a, S_a, dep_a)
         P.set_params()
         P.solve()
 
     Example (with some tweaks): 
     ---------------------------
 
-        P = plume.plume(gl_dep, volfl0, T_a, S_a, dep_a, theta = 80, 
+        P = plume.plume(dep0, volfl0, T_a, S_a, dep_a, theta = 80, 
                     plume_type = 'cone')
         P.set_params(Si = -10, e0 = 0.036)
-        P.solve(Sinit = 1, Tfreeze = True)
+        P.solve(S0 = 1, T0freeze = True)
     '''
+
+
 
 ###############################################################################
 ######  MODEL SETUP (Initializing the model case and setting parameters)  #####
 ###############################################################################
 
-    def __init__(self, gl_dep, volfl0, T_a, S_a, dep_a, theta = 90, 
-                 plume_type = 'line',):
+    def __init__(self, dep0, volfl0, Ta, Sa, depa, theta = 90, 
+                 plume_type = 'line', T0 = 0, S0 = 0, T0freeze = False, 
+                 T0melt =False, frac_melt = 1):
         '''
         Initializing a new plume object.
         '''
-        self.gldep = gl_dep
-        self.volfl0 = volfl0
-        self.Ta_o = T_a
-        self.Sa_o = S_a
-        self.depa_o = dep_a
-        self.theta = theta
-        self.plume_type = plume_type
+        init_input = locals()
 
-        if gl_dep > dep_a.max():
+        for key in init_input.keys():
+            setattr(self, key, init_input[key])
+
+        if dep0 > depa.max():
             raise Exception(
-                'Grounding line depth *gl_dep* (%.1f m) must not'%gl_dep
+                'Grounding line depth *dep0* (%.1f m) must not'%dep0
                 + ' exceed the deepest point on the ambient profile'
                 + ' *dep_a* (%.1f m).'%dep_a.max())
 
@@ -261,8 +271,11 @@ class plume():
         self.sinth = np.sin(self.theta*np.pi/180) # Calculate sin(theta)
 
         # Interpolants for ambient temp/sal
-        self.T_ambient_ip = interp1d(self.depa_o, self.Ta_o, kind = 'linear')
-        self.S_ambient_ip = interp1d(self.depa_o, self.Sa_o, kind = 'linear')
+        self.T_ambient_ip = interp1d(self.depa, self.Ta, kind = 'linear')
+        self.S_ambient_ip = interp1d(self.depa, self.Sa, kind = 'linear')
+
+        # Internal variable used to control explicit output when solving
+        self.prompt_to_continue_ = True
 
 ###############################################################################
 
@@ -341,7 +354,7 @@ class plume():
 ########  MODEL EXECUTION (Running the model and preparing the output) ########
 ###############################################################################
 
-    def solve(self, Tinit = 0, Sinit = 0, melt_on = True, method = 'RK45', 
+    def solve(self, melt_on = True, method = 'RK45', 
               max_step = 0.5, manual_step = False):
 
         '''
@@ -350,8 +363,6 @@ class plume():
         
         plume_type: ['line' or 'cone'] chooses which model 
                      formulation to use.
-
-        Tinit, Sinit: Initial plume temperature and salinity.
 
         melt_on: Include ice-ocean interactions.
 
@@ -367,7 +378,7 @@ class plume():
         '''
 
         # Get initial conditions
-        Y_init = self.get_Yinit(Tinit = Tinit, Sinit = Sinit,)
+        Y_init = self.get_Yinit()
 
         # Making a function wrapper so we can feed the function to the 
         # solver with arguments
@@ -384,8 +395,9 @@ class plume():
 
         ### SOLVING ###
         SOL = solve_ivp(dYdt_function_wrapper, 
-                        [0, self.gldep/self.sinth], Y_init, 
-                        events = [event_top_plume_wrapper, event_neutral_wrapper], 
+                        [0, self.dep0/self.sinth], Y_init, 
+                        events = [event_top_plume_wrapper, 
+                                  event_neutral_wrapper], 
                         vectorized = True, method = method, 
                         dense_output = False, max_step = max_step)
 
@@ -394,7 +406,7 @@ class plume():
 
         # Extract variables from solution
         self.x_pl = SOL.t
-        self.dep_pl = self.gldep - self.sinth*SOL.t
+        self.dep_pl = self.dep0 - self.sinth*SOL.t
         self.D_pl = SOL.y[0]**2 / SOL.y[1]
         self.U_pl = SOL.y[1] / SOL.y[0]
         self.T_pl = SOL.y[2] / SOL.y[0]
@@ -406,14 +418,14 @@ class plume():
             self.S_ambient_ip(self.dep_pl), self.S_pl)
 
         # Extract minimum depth
-        if SOL.status==0:   # SOL.status is 0 if x=self.gldep (dep=0) was 
+        if SOL.status==0:   # SOL.status is 0 if x=self.dep0 (dep=0) was 
                             # reached, i.e., if the plume reached the surface.
             self.min_dep = 0 
             self.surface_plume = True
 
         elif SOL.status==1: # SOL.status is 1 if a termination event occured, 
                             # i.e. if the plume reached a subsurface min depth.
-            self.min_dep = self.gldep - self.sinth*SOL.t_events[0][0]
+            self.min_dep = self.dep0 - self.sinth*SOL.t_events[0][0]
             self.surface_plume = False
 
         else:               # SOL.status is -1 if the integration failed.
@@ -423,7 +435,7 @@ class plume():
 
         # Extract neutral depth 
         if len(SOL.t_events[1]) == 1: # If the plume has a neutral depth
-            self.neut_dep = self.gldep - self.sinth*SOL.t_events[1][0]
+            self.neut_dep = self.dep0 - self.sinth*SOL.t_events[1][0]
             self.has_neut_dep = True
 
         else:
@@ -438,6 +450,10 @@ class plume():
         self.recompute_from_solution(SOL.y)
         self.compute_terminal_properties()
         self.compute_total_melt_entr()
+
+        # Remove internal attribute
+        delattr(self, 'prompt_to_continue_')
+
 
 ###############################################################################
 
@@ -454,22 +470,42 @@ class plume():
 
         If manual_step is toggled (True), a diagnostic string is
         printed at each step. 
+
         '''
 
         if np.isnan(Y).any():
+            if self.plume_type == 'line':
+                Ystr = '[DU, DU^2, DUT, DUS]'
+            elif self.plume_type == 'cone':
+                Ystr = '[D^2U, D^2U^2, D^2UT, D^2US]'
+
             raise Exception('''
                 Returned NaN at depth %.1f: 
-                [DU, DU^2, DUT, DUS] = [%.1f, %.1f, %.1f, %.1f]
-                '''%(x, *Y))
+                %s = [%.1f, %.1f, %.1f, %.1f]
+                '''%(self.dep0 - self.sinth*x, Ystr, *Y))
 
         # Read core variables from state variable
-        D_ = Y[0]**2 / Y[1]
+
         U_ = Y[1] / Y[0]
         T_ = Y[2] / Y[0]
         S_ = Y[3] / Y[0]
 
+        if self.plume_type == 'line':
+            D_ = Y[0]**2 / Y[1]
+
+        elif self.plume_type == 'cone':
+            try:
+                D_ = np.sqrt(Y[0]**2 / np.abs(Y[1]))
+            except:
+                import pdb
+                pdb.set_trace()
+
+        else: 
+            raise Exception("plume_type must be 'line' or 'cone' "
+                            + '(failed with plume_type=%s)'%plume_type)
+
         # Calculate depth         
-        dep = self.gldep - self.sinth*x 
+        dep = self.dep0 - self.sinth*x 
 
         # Calculate ice-ocean interface quantities
         M, Tb, Sb, GT, GS, Tf = self.get_melt(Y, dep, melt_on = melt_on)
@@ -486,77 +522,109 @@ class plume():
 
         # Calculate LHS of line plume equations
         if self.plume_type == 'line':
-            dDU_dt = E + M
-            dDUU_dt = D_*dRho*self.g - self.sinth*self.k*U_**2 
+            dDU_dt = E*self.sinth + M
+            dDUU_dt = D_*dRho*self.g*self.sinth - self.k*U_**2 
             dDUT_dt = E*Ta + M*Tb - GT*U_*(T_-Tb)
             dDUS_dt = E*Sa + M*Sb - GS*U_*(S_-Sb)
+            
+            dYdt = [dDU_dt, dDUU_dt, dDUT_dt, dDUS_dt]
 
         elif self.plume_type == 'cone':
-            dDU_dt = (np.pi*D_)*E + (2*D_)*M
-            dDUU_dt = ((D_**2*np.pi/2)*dRho*self.g 
-                      - self.sinth*(2*D_)*self.k*U_**2)
-            dDUT_dt = (np.pi*D_)*E*Ta + (2*D_)*M*Tb - (2*D_)*GT*U_*(T_-Tb)
-            dDUS_dt = (np.pi*D_)*E*Sa + (2*D_)*M*Sb - (2*D_)*GS*U_*(S_-Sb)
+            dDDU_dt = (2*D_)*E + (4*D_/np.pi)*M
+            dDDUU_dt = ( (D_**2)*dRho*self.g*self.sinth
+                       - (4*D_/np.pi)*self.k*U_**2 )
+            dDDUT_dt = ( (2*D_)*E*Ta + (4*D_/np.pi)*M*Tb 
+                        - (4*D_/np.pi)*GT*U_*(T_-Tb) )
+            dDDUS_dt = ( (2*D_)*E*Sa + (4*D_/np.pi)*M*Sb  
+                        - (2*D_/np.pi)*GS*U_*(S_-Sb) )
 
-        else: 
-            raise Exception("plume_type must be 'line' or 'cone' "
-                            + '(failed with plume_type=%s)'%plume_type)
+            dYdt = [dDDU_dt, dDDUU_dt, dDDUT_dt, dDDUS_dt]
 
-        dYdt = [dDU_dt, dDUU_dt, dDUT_dt, dDUS_dt]
 
         # Optional: Print the state vector at every step (for diagnostics):
         if manual_step: 
-            stepstr = '''
-                Ta: %.2f, Sa: %.2f, Tb: %.2f, Sb: %.2f,
-                dep: %.1f, D: %.2e, U: %.2e, dRho: %.2e
-                (press any key to continue..)
-                '''(Ta, Sa, Tb, Sb, dep, D_, U_, dRho)
-            dummy = input(manual_step_str) # Print diag string and 
-                                           # wait for input to continue.
+            stepstr = (
+                'Ta: %.2f, Sa: %.2f, Tb: %.2f, Sb: %.2f, '%(Ta, Sa, Tb, Sb)
+                +'dep: %.1f, D: %.2e, U: %.2e, dRho: %.2e'%(dep, D_, U_, dRho))
+
+            contstr = ('(press any key to continue, or "r" to' 
+                        + ' run without prompt..)')
+            
+            if self.prompt_to_continue_:
+                # Print diag string and wait for input to continue:
+                dummy = input(stepstr + contstr) 
+            else:
+                # Print diag string without prompting
+                dummy = print(stepstr)         
+
+            if dummy == 'r':
+                self.prompt_to_continue_ = False
 
         return dYdt
 
 ###############################################################################
 
-    def get_Yinit(self, Tfreeze = True, Tinit = 0, Sinit = 0):
+    def get_Yinit(self):
         '''
         Calculate initial conditions for the plume.
     
-        T and S can be specified. If Tfreeze = True, the temperature is 
-        set to the pressure-dependent freezing point
+        Initial T and S (T0, S0) can be specified. 
+        
+        If T0freeze = True, initial temperature T0 is set to the pressure-
+        dependent freezing point at salinity S0.
+        
+        If T0melt = True, the plume is initialized with a mixture of 
+        ambient water and ocean-driven meltwater. The latter calculated
+        from ambient temperature by moving along the "Gade line". The 
+        mixture is given by the parameter *frac_melt*:
+
+            frac_melt = 0 : Initial plume 100% ambient water
+            frac_melt = 1 : Initial plume ocean-driven meltwater at the freezing 
+                            point ("meltwater saturated ambient water") 
+        
         '''
 
-        # Set the initial temperature to the freezing point
-        if Tfreeze:
-            Tinit = Sinit*self.FPa + self.FPb + self.FPc*self.gldep
+        if self.T0freeze and self.T0melt:
+            raise Exception(
+                'Error in get_Yinit: Options *T0freeze* and *T0melt* are in' 
+                'conflict, and both cannot be set to True'
+                )
+       
 
-        # Get ambient T, S and density difference at the grounding line
-        Ta_init = self.T_ambient_ip(self.gldep)
-        Sa_init = self.S_ambient_ip(self.gldep)
-        drho_init = self.get_density_diff(Ta_init, Tinit, Sa_init, Sinit)
+        # Get ambient T, S at the initial plume depth
+        Ta0 = self.T_ambient_ip(self.dep0)
+        Sa0 = self.S_ambient_ip(self.dep0)
+
+        # Set the initial temperature to the freezing point
+        if self.T0freeze:
+            self.T0 = self.S0*self.FPa + self.FPb + self.FPc*self.dep0
+
+        if self.T0melt:
+            self.T0, self.S0 = self.get_mw_mixture(Ta0, Sa0, 
+                                                   self.frac_melt)
+
+        # Gety density difference at the initial plume depth
+        drho0 = self.get_density_diff(Ta0, self.T0, Sa0, 
+                                          self.S0)
 
         # Calculate initial plume D and U by assuming no initial u
         # upward momentum flux (setting LHS of (2) to 0):
 
         if self.plume_type == 'line':        
-            self.U_init = (drho_init*self.g*self.volfl0*self.sinth
-                           /(self.e0+self.k))**(1/3) 
-            self.D_init = self.volfl0/self.U_init
+            self.U0 = (drho0*self.g*self.volfl0*self.sinth
+                           /(self.e0*self.sinth+self.k))**(1/3) 
+            self.D0 = self.volfl0/self.U0
             
         if self.plume_type == 'cone':        
-            self.U_init = (np.sqrt(np.pi*self.volfl0/8/self.k**2)
-                           *(drho_init*self.g*self.sinth))**(2/5) 
-            self.D_init = np.sqrt(self.volfl0/(np.pi*self.U_init))
-
-        # Store initial temperature and salinity
-        self.T_init = Tinit
-        self.S_init = Sinit
+            self.U0 = (np.sqrt(np.pi*self.volfl0/8/self.k**2)
+                           *(drho0*self.g*self.sinth))**(2/5) 
+            self.D0 = np.sqrt(self.volfl0/(np.pi*self.U0))
 
         # Return initial state variable
-        Yinit = [self.D_init*self.U_init, 
-                 self.D_init*self.U_init**2, 
-                 self.D_init*self.U_init*self.T_init, 
-                 self.D_init*self.U_init*self.S_init]
+        Yinit = [self.D0*self.U0, 
+                 self.D0*self.U0**2, 
+                 self.D0*self.U0*self.T0, 
+                 self.D0*self.U0*self.S0]
 
         return Yinit
 
@@ -599,6 +667,7 @@ class plume():
         # Save as attributes
         for varkey in varkeys_melt + ['dRho', 'dep', 'Ta', 'Sa']:
             setattr(self, varkey+'_pl', VD_[varkey])
+
 
         # Freezing point of ambient water
         self.Tf_a = self.FPa*self.Sa_pl + self.FPb + self.FPc*self.dep_pl
@@ -748,8 +817,12 @@ class plume():
         # (Set U to minimum value if necessary)
         T_ = Y[2] / Y[0]
         S_ = Y[3] / Y[0]
-        U_ = max([Y[1] / Y[0], self.u_eps])
-        
+
+#        U_ = max([Y[1] / Y[0], self.u_eps])
+  
+        U_ = Y[1] / Y[0]
+
+
         # Calculate the freezing point of the plume water 
         Tf = self.FPa*S_ + self.FPb + self.FPc*dep
         # Calculate the freezing point for pure meltwater
@@ -784,7 +857,7 @@ class plume():
 
 ###############################################################################
 
-    def get_density_diff(self, Ta, T, Sa, S, ):
+    def get_density_diff(self, Ta, T, Sa, S):
         '''
         Get the scaled density difference between the plume (T, S) and 
         the ambient water (Ta, Sa).
@@ -796,6 +869,40 @@ class plume():
         return dRho
 
 ###############################################################################
+
+
+    def get_mw_mixture(self, Ta, Sa, frac_melt):
+        '''
+        Cooling and freshening ambient water (Ta, Sa) along "Gade lines" (T-S 
+        lines resulting from ocean-driven ice melt).
+        '''
+
+        # Get local freezing temperature at ambient salinity
+        Tf = Sa*self.FPa + self.FPb + self.FPc*self.dep0
+
+        # Get temperature of "effective" end member water mass 
+        T_eff = Tf - self.ci/self.c*(Tf - self.Ti)- self.L/self.c
+
+        # Get salinity and temperature at the intersection point
+        # between the freezing and Gade lines 
+        # ("melt-saturated ambient water")
+
+        S_sat = Sa*(T_eff  - (self.FPb + self.FPc*self.dep0))/(
+                                            Sa*self.FPa - Ta + T_eff)
+        T_sat = S_sat*self.FPa + self.FPb + self.FPc*self.dep0
+
+        # Compute T, S a fractional distance *frac_melt* along the
+        # line between ambient and melt saturated ambient water
+        # (along the Gade line towards its intersection with the 
+        # freezing line)
+    
+        Sp = Sa*(1-frac_melt) + S_sat*frac_melt
+        Tp = Ta*(1-frac_melt) + T_sat*frac_melt
+
+        return Tp, Sp
+
+
+###############################################################################
 ##  EVENT FUNCTIONS (telling solver when to register neutral/terminal depth) ##
 ###############################################################################
 
@@ -804,8 +911,8 @@ class plume():
         Finds the neutral depth by finding where the density 
         difference is minimized.
         '''
-        Ta = self.T_ambient_ip(self.gldep-x)
-        Sa = self.S_ambient_ip(self.gldep-x)
+        Ta = self.T_ambient_ip(self.dep0-x)
+        Sa = self.S_ambient_ip(self.dep0-x)
         dRho = self.get_density_diff(Ta, Y[2]/Y[0], Sa, Y[3]/Y[0])
         return dRho
 

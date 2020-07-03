@@ -1,10 +1,11 @@
 TO DO-LIST, ICE_OCEAN_PLUME
 ###########################
 
-(Updated 26.06 2020)
+(Updated 03.07 2020)
 
 SHORT TERM
 
+- 
 - Do more extensive testing/validation.
 
 LONG TERM / OPTIONAL

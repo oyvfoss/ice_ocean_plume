@@ -616,9 +616,10 @@ class plume():
             self.D0 = self.volfl0/self.U0
             
         if self.plume_type == 'cone':        
-            self.U0 = (np.sqrt(np.pi*self.volfl0/8/self.k**2)
-                           *(drho0*self.g*self.sinth))**(2/5) 
-            self.D0 = np.sqrt(self.volfl0/(np.pi*self.U0))
+            self.U0 = ( (np.sqrt(np.pi/2)*(drho0*self.g*self.sinth)
+                       /(np.pi*self.e0*self.sinth+2*self.k))**(2/5)
+                       + self.volfl0**(1/5) )
+            self.D0 = np.sqrt(2*self.volfl0/(np.pi*self.U0))
 
         # Return initial state variable
         Yinit = [self.D0*self.U0, 
@@ -817,8 +818,6 @@ class plume():
         # (Set U to minimum value if necessary)
         T_ = Y[2] / Y[0]
         S_ = Y[3] / Y[0]
-
-#        U_ = max([Y[1] / Y[0], self.u_eps])
   
         U_ = Y[1] / Y[0]
 

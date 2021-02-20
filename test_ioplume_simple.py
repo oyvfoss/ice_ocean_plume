@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 gldep = 500 # Plume start depth (grounding line, e.g.)
 plume_type = 'cone' # Line or cone plume 
-volfl0 = 1e-10 # For a line plume, this is volume per glacier front width (m2/s)
+volfl0 = 1e-8 # For a line plume, this is volume per glacier front width (m2/s)
 
 T0 = 0
 S0 = 0
@@ -24,7 +24,7 @@ Ta = depa*0 + 2.0
 Sa = depa*0 + 35.0
 dz_upper = 1
 Sa[:100] = 35-dz_upper+np.arange(100)/100*dz_upper
-Sa[100:] = 35+np.arange(401)/401/2
+Sa[100:] = 35+np.arange(401)/401/10
 
 
 ######## Run model ############################################################

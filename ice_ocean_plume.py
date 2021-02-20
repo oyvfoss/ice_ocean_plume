@@ -690,12 +690,19 @@ class plume():
             setattr(self, keynm_terminal, val_terminal)
 
         # Read values at neutral depth
-        if self.has_neut_dep:
-            for key in terminal_vars:
-                keynm_pl, keynm_neut = '%s_pl'%key, '%s_neut'%key
+        # (at surface if there is no neutral depth)
+        for key in terminal_vars:
+            keynm_pl, keynm_neut = '%s_pl'%key, '%s_neut'%key
+
+            if self.has_neut_dep:
                 # Interpolate variable onto depth of neutral buoyancy 
                 val_neut = interp1d(self.dep_pl, 
                                     getattr(self, keynm_pl))(self.neut_dep)  
+                setattr(self, keynm_neut, val_neut)
+            else:
+                # Interpolate variable onto surface 
+                val_neut = interp1d(self.dep_pl, 
+                                    getattr(self, keynm_pl))(0)  
                 setattr(self, keynm_neut, val_neut)
 
 
@@ -715,6 +722,7 @@ class plume():
 
 
 ###############################################################################
+
 
     def compute_total_melt_entr(self):
         '''
@@ -791,12 +799,11 @@ class plume():
         # from terminal level volume flux may occur - if high precision is 
         # necessary: reduce the step size (max_step = 0.5 in solve()).
         
-        if self.has_neut_dep:
-            self.terminal_volflux = (self.melt_to_neutral + self.entr_to_neutral 
-                                     + self.volfl0)
-            self.terminal_frac_melt = self.melt_to_neutral/self.terminal_volflux 
-            self.terminal_frac_entr = self.entr_to_neutral/self.terminal_volflux 
-            self.terminal_frac_volfl0 = self.volfl0/self.terminal_volflux 
+        self.terminal_volflux = (self.melt_to_neutral + self.entr_to_neutral 
+                                    + self.volfl0)
+        self.terminal_frac_melt = self.melt_to_neutral/self.terminal_volflux 
+        self.terminal_frac_entr = self.entr_to_neutral/self.terminal_volflux 
+        self.terminal_frac_volfl0 = self.volfl0/self.terminal_volflux 
 
 
 

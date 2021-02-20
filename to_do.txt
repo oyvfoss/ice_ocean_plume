@@ -5,7 +5,6 @@ TO DO-LIST, ICE_OCEAN_PLUME
 
 SHORT TERM
 
-- 
 - Do more extensive testing/validation.
 
 LONG TERM / OPTIONAL

@@ -2,6 +2,10 @@
 
 ---
 
+STATUS 21.02 2021: 
+Some minor tweaks of the output - core functionality seems good, but 
+proper validation remains. 
+
 STATUS 26.06 2020: 
 Seems to work nicely, but yet to do extensive testing/validation.
 

@@ -760,7 +760,8 @@ class plume():
              self.entr_total = simps(np.pi*0.5*self.D_pl[::-1][1:]**2
                                      *self.E_pl[::-1][1:], 
                                      self.dep_pl[::-1][1:])
-
+             self.face_area_total = simps(2*self.D_pl[::-1][1:], 
+                                     self.dep_pl[::-1][1:])
 
         # Compute integrated melt/entrainment rate up to neutral depth.
         # If neutral depth is not reached: Integrating over the 
@@ -769,6 +770,7 @@ class plume():
         if self.has_neut_dep:
             #   (Index of last point before crossing neutral depth.)
             neut_ind = np.ma.where(self.dep_pl-self.neut_dep < 0)[0][0]
+            self.neut_ind = neut_ind
             #   (M, D and dep up to  - and including - the neutral depth.) 
             M_to_neut = np.append(self.M_pl[:neut_ind], self.M_neut)
             E_to_neut = np.append(self.E_pl[:neut_ind], self.M_neut)
@@ -787,9 +789,12 @@ class plume():
                 self.entr_to_neutral = simps(np.pi*0.5*D_to_neut[::-1]**2
                                              *E_to_neut[::-1],
                                              dep_to_neut[::-1])
+                self.face_area_to_neutral = simps(2*D_to_neut[::-1], 
+                            dep_to_neut[::-1])
         else:
             self.melt_to_neutral = self.melt_total 
             self.entr_to_neutral = self.entr_total 
+            self.neut_ind = -1
 
 
         # Get fraction meltwater / entrained ambient water / initial volume flux

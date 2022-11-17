@@ -791,11 +791,16 @@ class plume():
                                              dep_to_neut[::-1])
                 self.face_area_to_neutral = simps(2*D_to_neut[::-1], 
                             dep_to_neut[::-1])
+
         else:
             self.melt_to_neutral = self.melt_total 
             self.entr_to_neutral = self.entr_total 
             self.neut_ind = -1
 
+            if self.plume_type == 'cone':
+
+                self.face_area_to_neutral = simps(2*self.D_pl[::-1], 
+                    self.dep_pl[::-1])
 
         # Get fraction meltwater / entrained ambient water / initial volume flux
         # in the plume at terminal depth (surface or neutral depth).
